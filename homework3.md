@@ -1,4 +1,4 @@
-### Homework 3: Pipelines
+# Homework 3: Pipelines
 
 ## Author: Joaquin Lopez
 
@@ -10,7 +10,7 @@
 
 ## Annotation File Summary
 
-# Total number of features:
+### Total number of features:
 
 1. Exon: 190050
 2. CDS: 163242
@@ -29,7 +29,7 @@
 15. rRNA: 115
 16. snRNA: 32
 
-# Total number of genes per chromosome arm
+### Total number of genes per chromosome arm
 
 1. X: 2708
 2. Y: 113
