@@ -4,7 +4,7 @@
 
 ## Summaries of the Genome
 
-1. Total number of nucleotides: unavailable 
+1. Total number of nucleotides: 143726002
 2. Total number of Ns: 1154851
 3. Total number of sequences: 1870
 
