@@ -40,7 +40,7 @@ large_data <- read.table("large_seqs_data.txt", col.names = c("Length", "GC"))
 
 # Function to save plots
 save_plot <- function(data, column, title, xlab, file, log_scale=FALSE, breaks=30) {
- png(file)
+  png(file)
   hist(data[[column]], breaks=breaks, main=title, xlab=xlab, col="skyblue", border="white")
   if (log_scale) {
     axis(1, at=log10(pretty(range(data[[column]]))), labels=pretty(range(data[[column]])))
@@ -59,8 +59,8 @@ save_plot(large_data, "GC", "GC% Distribution (> 100kb)", "GC%", "large_gc_hist.
 
 # Cumulative size (CDF)
 plot_cdf <- function(data, title, file) {
-  data <- data[order(data\$Length, decreasing=TRUE), ]
-  cumulative <- cumsum(data\$Length)
+  data <- data[order(data$Length, decreasing = TRUE), "Length"]
+  cumulative <- cumsum(data)
   png(file)
   plot(cumulative, type="l", col="blue", main=title, xlab="Sequence Index", ylab="Cumulative Size")
   dev.off()
@@ -94,49 +94,47 @@ echo "FASTA conversion completed. Main assembly: ISO1_assembly.bp.p_ctg.fasta"
 # Step 8: Calculate N50
 echo "Calculating N50..."
 bioawk -c fastx '{ print length($seq) }' ISO1_assembly.bp.p_ctg.fasta | sort -nr > contig_lengths.txt
-N50=$(awk '{
-  total += $1;
-  lengths[NR] = $1;
-}
-END {
-  half = total / 2;
-  cumulative = 0;
-  for (i = 1; i <= NR; i++) {
-    cumulative += lengths[i];
-    if (cumulative >= half) {
-      print lengths[i];
-      exit;
-    }
-  }
-}' contig_lengths.txt)
+N50=$(awk 'BEGIN { total=0 } { total+=$1; lengths[NR]=$1 } END { half=total/2; cumulative=0; for (i=1; i<=NR; i++) { cumulative+=lengths[i]; if (cumulative>=half) { print lengths[i]; exit } } }' contig_lengths.txt)
 echo "N50: $N50"
 
 # Step 9: Create Contiguity Plot
 echo "Creating contiguity plot..."
 bioawk -c fastx '{ print length($seq) }' dmel-all-chromosome-r6.48.fasta | sort -nr > reference_contigs.txt
-plotcdf2 -o contiguity_comparison.png contig_lengths.txt reference_contigs.txt
+if ! command -v plotCDF &> /dev/null; then
+    echo "plotCDF command not found. Please ensure it is installed and accessible."
+    exit 1
+fi
+plotCDF contig_lengths.txt reference_contigs.txt > contiguity_comparison.png || {
+    echo "plotCDF failed. Exiting."
+    exit 1
+}
 
 # Step 10: BUSCO Analysis
-echo "Running BUSCO analysis..."
-source $(mamba info --base)/etc/profile.d/conda.sh
-mamba activate ee282
+echo "Running BUSCO analysis on assemblies..."
+source $(mamba info --base)/etc/profile.d/mamba.sh
+mamba activate busco_env
 
-busco -i ISO1_assembly.bp.p_ctg.fasta -o busco_your_assembly -l diptera_odb10 -m genome -c 16
-busco -i dmel-all-chromosome-r6.48.fasta -o busco_reference -l diptera_odb10 -m genome -c 16
+if ! command -v busco &> /dev/null; then
+    echo "BUSCO command not found. Please ensure it is installed in the busco_env."
+    mamba deactivate
+    exit 1
+fi
 
+busco -i ISO1_assembly.bp.p_ctg.fasta -o busco_your_assembly -l diptera_odb10 -m genome -c 16 || {
+    echo "BUSCO analysis on your assembly failed. Exiting."
+    mamba deactivate
+    exit 1
+}
+
+busco -i dmel-all-chromosome-r6.48.fasta -o busco_reference -l diptera_odb10 -m genome -c 16 || {
+    echo "BUSCO analysis on FlyBase assembly failed. Exiting."
+    mamba deactivate
+    exit 1
+}
 mamba deactivate
-
-# Extra Credit: Dotplot Comparison
-echo "Preparing FlyBase contig assembly for dotplot comparison..."
-faSplitByN dmel-all-chromosome-r6.48.fasta 10 dmel-contigs/
-
-nucmer --maxmatch --prefix=dotplot ISO1_assembly.bp.p_ctg.fasta dmel-contigs/
-delta-filter -1 dotplot.delta > dotplot.filtered.delta
-mummerplot --png --layout -p dotplot dotplot.filtered.delta
 
 # Cleanup
 echo "Cleaning up temporary files..."
-rm dmel-all-chromosome-r6.48.fasta small_seqs_data.txt large_seqs_data.txt relevant_md5sum.txt dotplot.delta dotplot.filtered.delta dotplot.fplot dotplot.gp dotplot.rplot
+rm dmel-all-chromosome-r6.48.fasta small_seqs_data.txt large_seqs_data.txt relevant_md5sum.txt contig_lengths.txt reference_contigs.txt
 
-echo "Script completed. Assembly results, N50, contiguity plot, BUSCO results, and dotplot are ready."
-
+echo "Script completed. Assembly results, N50, contiguity plot, and BUSCO results are ready."
