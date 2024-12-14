@@ -133,3 +133,32 @@ View(top4_asv_df) # View top 4 ASVs relative abundance data in a table format
 family_otu_df <- as.data.frame(otu_table(ps.family.rel))
 write.csv(family_otu_df, "C:/Users/joaqu/Documents/ee282_project_analysis/CSV_data/family_level_relative_abundance_table.csv")
 View(family_otu_df) # View family-level relative abundance data in a table format
+
+########### table
+
+# Load required libraries
+library(ggplot2)
+library(gridExtra)  # For tableGrob()
+library(grid)       # For grid.draw() and layout
+
+# **1. Read Processing and Filtering Table**
+read_processing_data <- data.frame(
+  `Sample ID` = c('mR406-L1-P184-ACCAGAAATGTC', 
+                  'mR411-L1-P123-GCGTGCCCGGCC', 
+                  'mR411-L1-P171-GTCACGGACATT', 
+                  'mR411-L1-P306-GAACAAAGAGCG'),
+  `Input Reads` = c(25253, 13945, 22645, 44788),
+  `Filtered Reads` = c(21898, 8625, 14513, 33572),
+  `Denoised Reads` = c(21789, 8525, 14403, 33328),
+  `Non-Chimeric Reads` = c(20721, 8522, 13907, 28156)
+)
+
+# Create table plot
+table1 <- tableGrob(read_processing_data)
+
+# Save the table as a PNG file
+png(filename = "C:/Users/joaqu/Documents/ee282_project_analysis/read_processing_and_filtering.png", width = 800, height = 200)
+grid.draw(table1)
+dev.off()
+
+
